@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나만의 카페 경영 시뮬레이션</title>
+<style>
+  :root {
+    --bg: #fff8ee;
+    --card: #ffffff;
+    --brown: #6b4a33;
+    --brown-light: #a67c5b;
+    --cream: #fdf1df;
+    --accent: #d98a4a;
+    --green: #4a9a76;
+    --red: #d2504a;
+    --line: #ead9c3;
+    --text: #3d2b1f;
+    --muted: #8a7566;
+    --shadow: 0 6px 20px rgba(107, 74, 51, 0.10);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    background: linear-gradient(180deg, #fff3e0 0%, var(--bg) 220px);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  header { text-align: center; padding: 18px 8px 22px; }
+  header .icon { font-size: 40px; line-height: 1; }
+  h1 { margin: 6px 0 6px; font-size: clamp(1.5rem, 5vw, 2.2rem); color: var(--brown); letter-spacing: -0.5px; }
+  header p { margin: 0; color: var(--muted); font-size: 0.98rem; }
+
+  .layout { display: grid; grid-template-columns: 1fr; gap: 18px; }
+  @media (min-width: 800px) {
+    .layout { grid-template-columns: 5fr 7fr; align-items: start; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 1.15rem; color: var(--brown); }
+
+  /* 입력 */
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .control { display: flex; gap: 8px; align-items: stretch; }
+  .input-box {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center;
+    background: var(--cream);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 0 14px;
+    height: 54px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(217, 138, 74, .18); }
+  .input-box.invalid { border-color: var(--red); background: #fff2f1; }
+  .input-box input {
+    flex: 1; min-width: 0; width: 100%;
+    border: none; background: transparent; outline: none;
+    font: inherit; font-size: 1.15rem; /* 16px 이상: 모바일 확대 방지 */
+    font-weight: 700; color: var(--text);
+    text-align: right; padding: 0;
+  }
+  .input-box .unit { margin-left: 6px; color: var(--muted); font-weight: 600; }
+  .step-btn {
+    width: 54px; min-width: 54px; height: 54px;
+    border: none; border-radius: 14px;
+    background: var(--brown); color: #fff;
+    font-size: 1.6rem; font-weight: 700; cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .08s, background .15s;
+  }
+  .step-btn:hover { background: #5a3d29; }
+  .step-btn:active { transform: scale(.94); }
+  .hint { margin: 6px 2px 0; font-size: .85rem; color: var(--muted); }
+  .error { margin: 6px 2px 0; font-size: .88rem; color: var(--red); min-height: 1.2em; font-weight: 600; }
+
+  .reset-btn {
+    width: 100%; height: 54px;
+    border: 2px solid var(--brown-light); border-radius: 14px;
+    background: #fff; color: var(--brown);
+    font: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+    touch-action: manipulation;
+  }
+  .reset-btn:hover { background: var(--cream); }
+  .reset-btn:active { transform: scale(.98); }
+
+  /* 결과 */
+  .results { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 8px; }
+  @media (min-width: 520px) { .results { grid-template-columns: repeat(3, 1fr); } }
+  .result {
+    background: var(--cream); border-radius: 16px; padding: 14px 16px;
+    border: 1px solid var(--line);
+  }
+  .result .name { font-size: .9rem; color: var(--muted); font-weight: 600; }
+  .result .value { font-size: clamp(1.2rem, 4.2vw, 1.5rem); font-weight: 800; margin-top: 2px; word-break: keep-all; overflow-wrap: anywhere; }
+  .result.sales .value { color: var(--brown); }
+  .result.profit .value { color: var(--green); }
+  .result.profit.loss .value { color: var(--red); }
+  .sub { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 2px 0; font-size: .92rem; color: var(--muted); }
+  .sub b { color: var(--text); }
+  .warn {
+    margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+    background: #fff2f1; color: var(--red); font-weight: 600; font-size: .92rem;
+  }
+  .warn[hidden] { display: none; }
+
+  .chart-title { margin: 18px 0 6px; font-size: 1.05rem; color: var(--brown); font-weight: 700; }
+  .chart-wrap { width: 100%; }
+  canvas { display: block; width: 100%; height: 300px; }
+  @media (max-width: 600px) { canvas { height: 260px; } }
+
+  .notice {
+    margin-top: 18px; padding: 14px 16px; border-radius: 14px;
+    background: #fff; border: 1px dashed var(--brown-light);
+    color: var(--muted); font-size: .9rem;
+  }
+  .notice strong { color: var(--brown); }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="icon" aria-hidden="true">☕</div>
+    <h1>나만의 카페 경영 시뮬레이션</h1>
+    <p>가격·재료비·판매량을 바꿔 보며 하루 매출과 이익을 확인해 보세요.</p>
+  </header>
+
+  <main class="layout">
+    <!-- 입력 영역 -->
+    <section class="card" aria-labelledby="in-title">
+      <h2 id="in-title">☕ 운영 조건 입력</h2>
+
+      <div class="field">
+        <label for="price">커피 한 잔 판매 가격</label>
+        <div class="control">
+          <button type="button" class="step-btn" data-target="price" data-dir="-1" aria-label="판매 가격 100원 줄이기">−</button>
+          <div class="input-box" id="box-price">
+            <input id="price" type="text" inputmode="numeric" autocomplete="off" aria-describedby="err-price" value="4,000">
+            <span class="unit">원</span>
+          </div>
+          <button type="button" class="step-btn" data-target="price" data-dir="1" aria-label="판매 가격 100원 늘리기">+</button>
+        </div>
+        <div class="error" id="err-price" role="alert"></div>
+      </div>
+
+      <div class="field">
+        <label for="cost">커피 한 잔 재료비</label>
+        <div class="control">
+          <button type="button" class="step-btn" data-target="cost" data-dir="-1" aria-label="재료비 100원 줄이기">−</button>
+          <div class="input-box" id="box-cost">
+            <input id="cost" type="text" inputmode="numeric" autocomplete="off" aria-describedby="err-cost" value="1,500">
+            <span class="unit">원</span>
+          </div>
+          <button type="button" class="step-btn" data-target="cost" data-dir="1" aria-label="재료비 100원 늘리기">+</button>
+        </div>
+        <div class="error" id="err-cost" role="alert"></div>
+      </div>
+
+      <div class="field">
+        <label for="qty">하루 예상 판매량</label>
+        <div class="control">
+          <button type="button" class="step-btn" data-target="qty" data-dir="-1" aria-label="판매량 1잔 줄이기">−</button>
+          <div class="input-box" id="box-qty">
+            <input id="qty" type="text" inputmode="numeric" autocomplete="off" aria-describedby="err-qty" value="50">
+            <span class="unit">잔</span>
+          </div>
+          <button type="button" class="step-btn" data-target="qty" data-dir="1" aria-label="판매량 1잔 늘리기">+</button>
+        </div>
+        <div class="error" id="err-qty" role="alert"></div>
+      </div>
+
+      <p class="hint">0 이상의 정수만 입력할 수 있어요. (가격·재료비 최대 1,000,000원 / 판매량 최대 100,000잔)</p>
+      <div style="height:14px"></div>
+      <button type="button" class="reset-btn" id="reset">기본값으로 되돌리기</button>
+    </section>
+
+    <!-- 결과 영역 -->
+    <section class="card" aria-labelledby="out-title">
+      <h2 id="out-title">📊 하루 결과</h2>
+
+      <div class="results" aria-live="polite">
+        <div class="result sales">
+          <div class="name">하루 예상 매출</div>
+          <div class="value" id="out-sales">-</div>
+        </div>
+        <div class="result cost">
+          <div class="name">전체 재료비</div>
+          <div class="value" id="out-cost">-</div>
+        </div>
+        <div class="result profit" id="profit-card">
+          <div class="name">재료비 제외 이익</div>
+          <div class="value" id="out-profit">-</div>
+        </div>
+      </div>
+
+      <div class="sub">
+        <span>한 잔당 이익: <b id="out-unit">-</b></span>
+        <span>이익률: <b id="out-margin">-</b></span>
+      </div>
+      <div class="warn" id="warn" hidden></div>
+
+      <div class="chart-title">매출과 재료비 제외 이익 비교</div>
+      <div class="chart-wrap" id="chart-wrap">
+        <canvas id="chart" role="img" aria-label="매출과 재료비 제외 이익 막대그래프"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <div class="notice">
+    <strong>안내</strong> 이 시뮬레이션은 실제 매출을 예측하는 것이 아니라, 사용자가 입력한 조건으로 계산한 결과입니다.
+    '재료비 제외 이익'은 임대료, 인건비, 세금 등 다른 비용을 반영하지 않은 값입니다.
+  </div>
+  <footer>☕ 나만의 카페 경영 시뮬레이션</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEFAULTS = { price: 4000, cost: 1500, qty: 50 };
+  var FIELDS = {
+    price: { max: 1000000, step: 100, name: '판매 가격' },
+    cost:  { max: 1000000, step: 100, name: '재료비' },
+    qty:   { max: 100000,  step: 1,   name: '판매량' }
+  };
+
+  var el = {}, box = {}, err = {};
+  Object.keys(FIELDS).forEach(function (k) {
+    el[k] = document.getElementById(k);
+    box[k] = document.getElementById('box-' + k);
+    err[k] = document.getElementById('err-' + k);
+  });
+  var out = {
+    sales: document.getElementById('out-sales'),
+    cost: document.getElementById('out-cost'),
+    profit: document.getElementById('out-profit'),
+    unit: document.getElementById('out-unit'),
+    margin: document.getElementById('out-margin'),
+    profitCard: document.getElementById('profit-card'),
+    warn: document.getElementById('warn')
+  };
+  var canvas = document.getElementById('chart');
+  var ctx = canvas.getContext('2d');
+  var lastData = null;
+
+  function won(n) { return n.toLocaleString('ko-KR') + '원'; }
+  function comma(n) { return n.toLocaleString('ko-KR'); }
+
+  function setError(key, msg) {
+    err[key].textContent = msg || '';
+    box[key].classList.toggle('invalid', !!msg);
+  }
+
+  /* 입력값 정리: 숫자 이외 제거, 천 단위 쉼표 적용, 커서 위치 유지 */
+  function sanitize(key, keepCaret) {
+    var input = el[key], f = FIELDS[key];
+    var raw = input.value;
+    var caret = input.selectionStart == null ? raw.length : input.selectionStart;
+    var digitsBefore = raw.slice(0, caret).replace(/\D/g, '').length;
+
+    var msg = '';
+    if (raw.indexOf('-') !== -1 || raw.indexOf('−') !== -1) {
+      msg = '음수는 입력할 수 없어요.';
+    } else if (/[.]/.test(raw)) {
+      msg = '소수점 없이 정수만 입력해 주세요.';
+    } else if (/[^\d,\s]/.test(raw)) {
+      msg = '숫자만 입력할 수 있어요.';
+    }
+
+    var digits = raw.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    if (digits === '') {
+      input.value = '';
+      setError(key, msg || (f.name + '을(를) 입력해 주세요.'));
+      return;
+    }
+    if (digits.length > 9) digits = digits.slice(0, 9);
+    var n = Number(digits);
+    if (n > f.max) {
+      n = f.max;
+      msg = f.name + '은(는) 최대 ' + comma(f.max) + (key === 'qty' ? '잔' : '원') + '까지 입력할 수 있어요.';
+    }
+    var formatted = comma(n);
+    input.value = formatted;
+
+    if (keepCaret) {
+      var pos = 0, seen = 0;
+      while (pos < formatted.length && seen < digitsBefore) {
+        if (/\d/.test(formatted[pos])) seen++;
+        pos++;
+      }
+      try { input.setSelectionRange(pos, pos); } catch (e) {}
+    }
+    setError(key, msg);
+  }
+
+  function readValue(key) {
+    var d = el[key].value.replace(/\D/g, '');
+    return d === '' ? null : Number(d);
+  }
+
+  function update() {
+    var price = readValue('price'), cost = readValue('cost'), qty = readValue('qty');
+    if (price === null || cost === null || qty === null) {
+      out.sales.textContent = out.cost.textContent = out.profit.textContent = '-';
+      out.unit.textContent = out.margin.textContent = '-';
+      out.profitCard.classList.remove('loss');
+      out.warn.hidden = false;
+      out.warn.textContent = '비어 있는 입력칸이 있어요. 모든 값을 입력하면 결과가 계산돼요.';
+      lastData = null;
+      draw();
+      return;
+    }
+    var sales = price * qty;
+    var totalCost = cost * qty;
+    var profit = sales - totalCost;
+    var unit = price - cost;
+    var margin = sales > 0 ? (profit / sales * 100) : null;
+
+    out.sales.textContent = won(sales);
+    out.cost.textContent = won(totalCost);
+    out.profit.textContent = won(profit);
+    out.unit.textContent = won(unit);
+    out.margin.textContent = margin === null ? '-' : (Math.round(margin * 10) / 10).toLocaleString('ko-KR') + '%';
+    out.profitCard.classList.toggle('loss', profit < 0);
+
+    if (cost > price) {
+      out.warn.hidden = false;
+      out.warn.textContent = '재료비가 판매 가격보다 높아서 한 잔 팔 때마다 손해가 나요.';
+    } else if (qty === 0) {
+      out.warn.hidden = false;
+      out.warn.textContent = '판매량이 0잔이라 매출과 이익이 없어요.';
+    } else {
+      out.warn.hidden = true;
+    }
+
+    lastData = { sales: sales, profit: profit };
+    canvas.setAttribute('aria-label',
+      '막대그래프. 하루 예상 매출 ' + won(sales) + ', 재료비 제외 이익 ' + won(profit));
+    draw();
+  }
+
+  /* 막대그래프 (캔버스, 화면 크기에 맞춰 자동 조절) */
+  function draw() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    var fontFamily = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+    var small = w < 420;
+
+    if (!lastData) {
+      ctx.fillStyle = '#8a7566';
+      ctx.font = '600 ' + (small ? 14 : 16) + 'px ' + fontFamily;
+      ctx.textAlign = 'center';
+      ctx.fillText('올바른 값을 입력하면 그래프가 표시돼요.', w / 2, h / 2);
+      return;
+    }
+
+    var bars = [
+      { label: '하루 예상 매출', value: lastData.sales, color: '#a67c5b' },
+      { label: '재료비 제외 이익', value: lastData.profit, color: lastData.profit < 0 ? '#d2504a' : '#4a9a76' }
+    ];
+
+    var top = 40, bottom = 56, padX = 12;
+    var plotH = h - top - bottom;
+    var max = Math.max(0, bars[0].value, bars[1].value);
+    var min = Math.min(0, bars[0].value, bars[1].value);
+    if (max === 0 && min === 0) max = 1;
+    var range = max - min;
+    function y(v) { return top + (max - v) / range * plotH; }
+    var zeroY = y(0);
+
+    // 보조선
+    ctx.strokeStyle = '#f1e4d2';
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      var gy = top + plotH * i / 4;
+      ctx.beginPath(); ctx.moveTo(padX, gy); ctx.lineTo(w - padX, gy); ctx.stroke();
+    }
+    // 기준선
+    ctx.strokeStyle = '#c9ad8f';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(padX, zeroY); ctx.lineTo(w - padX, zeroY); ctx.stroke();
+
+    var slot = (w - padX * 2) / 2;
+    var barW = Math.min(120, slot * 0.6);
+    var valueFont = (small ? 13 : 16);
+
+    bars.forEach(function (b, idx) {
+      var cx = padX + slot * idx + slot / 2;
+      var yv = y(b.value);
+      var barTop = Math.min(yv, zeroY);
+      var barH = Math.max(Math.abs(zeroY - yv), b.value === 0 ? 0 : 2);
+
+      ctx.fillStyle = b.color;
+      roundRect(cx - barW / 2, barTop, barW, barH, 8, b.value >= 0);
+
+      // 값 라벨
+      ctx.fillStyle = '#3d2b1f';
+      ctx.font = '800 ' + valueFont + 'px ' + fontFamily;
+      ctx.textAlign = 'center';
+      var txt = won(b.value);
+      if (b.value >= 0) {
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(txt, cx, barTop - 6, slot - 8);
+      } else {
+        ctx.textBaseline = 'top';
+        ctx.fillText(txt, cx, barTop + barH + 6, slot - 8);
+      }
+
+      // 항목 라벨
+      ctx.fillStyle = '#6b4a33';
+      ctx.font = '700 ' + (small ? 13 : 15) + 'px ' + fontFamily;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(b.label, cx, h - 16, slot - 8);
+    });
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function roundRect(x, y0, w, h, r, roundTop) {
+    r = Math.min(r, w / 2, h);
+    ctx.beginPath();
+    if (h <= 0) { return; }
+    if (roundTop) {
+      ctx.moveTo(x, y0 + h);
+      ctx.lineTo(x, y0 + r);
+      ctx.quadraticCurveTo(x, y0, x + r, y0);
+      ctx.lineTo(x + w - r, y0);
+      ctx.quadraticCurveTo(x + w, y0, x + w, y0 + r);
+      ctx.lineTo(x + w, y0 + h);
+    } else {
+      ctx.moveTo(x, y0);
+      ctx.lineTo(x, y0 + h - r);
+      ctx.quadraticCurveTo(x, y0 + h, x + r, y0 + h);
+      ctx.lineTo(x + w - r, y0 + h);
+      ctx.quadraticCurveTo(x + w, y0 + h, x + w, y0 + h - r);
+      ctx.lineTo(x + w, y0);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* 이벤트 연결 */
+  Object.keys(FIELDS).forEach(function (k) {
+    el[k].addEventListener('input', function () { sanitize(k, true); update(); });
+    el[k].addEventListener('blur', function () {
+      if (el[k].value === '') setError(k, FIELDS[k].name + '을(를) 입력해 주세요.');
+    });
+    el[k].addEventListener('focus', function () {
+      var i = el[k];
+      setTimeout(function () { try { i.select(); } catch (e) {} }, 0);
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.step-btn'), function (btn) {
+    btn.addEventListener('click', function () {
+      var k = btn.getAttribute('data-target');
+      var dir = Number(btn.getAttribute('data-dir'));
+      var f = FIELDS[k];
+      var cur = readValue(k);
+      if (cur === null) cur = 0;
+      var next = cur + dir * f.step;
+      if (next < 0) next = 0;
+      if (next > f.max) next = f.max;
+      el[k].value = comma(next);
+      setError(k, '');
+      update();
+    });
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    Object.keys(DEFAULTS).forEach(function (k) {
+      el[k].value = comma(DEFAULTS[k]);
+      setError(k, '');
+    });
+    update();
+  });
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(draw).observe(document.getElementById('chart-wrap'));
+  }
+  window.addEventListener('resize', draw);
+
+  update();
+})();
+</script>
+</body>
+</html>
